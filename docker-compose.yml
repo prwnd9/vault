@@ -1,0 +1,31 @@
+services:
+  vault:
+    container_name: vault
+    image: hashicorp/vault:1.18.1
+    environment:
+      VAULT_ADDR: "http://0.0.0.0:8200"
+      VAULT_API_ADDR: "http://0.0.0.0:8200"
+    ports:
+      - "127.0.0.1:8200:8200"
+    volumes:
+      - ./config.json:/vault/config/config.json
+      - ./vault_data:/vault/file
+    cap_add:
+      - IPC_LOCK
+      - DAC_OVERRIDE
+    entrypoint: vault server -log-level trace -config /vault/config/config.json
+    healthcheck:
+      test: ["CMD", "nc", "-z", "127.0.0.1", "8200"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+  vault-unseal:
+    image: hashicorp/vault:1.18.1
+    container_name: vault-unseal
+    depends_on:
+      - vault
+    entrypoint: ["sh", "-c", "sleep 5; vault operator unseal 2M1+JkxXxAXikMGkAE/Alhk9gbIJtgDp54kC6unAszA="]
+    environment:
+      - VAULT_ADDR=http://vault:8200
+    restart: "no"
